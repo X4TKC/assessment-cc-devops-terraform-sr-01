@@ -50,8 +50,10 @@ jobs:
         run: terraform plan -var-file="${{ github.base_ref}}.tfvars"
         working-directory: ./terraform
       - name: Terraform Apply
-        run: terraform apply -auto-approve
+        run: terraform apply -auto-approve -var-file="${{ github.base_ref}}.tfvars"
         working-directory: ./terraform
       - name: Upload to s3
         run: |
           BUCKET_NAME=${terraform output -raw s3_bucket_name}
+          aws s3 sync build s3://$BUCKET_NAME --delete
+        working-directory: ./terraform
