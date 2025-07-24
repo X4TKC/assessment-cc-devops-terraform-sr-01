@@ -33,3 +33,31 @@ jobs:
 
       - name: Build project
         run: npm run build
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4.2.1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+      - name: SetUp Terraform
+        uses: hashicorp/setup-terraform@v3.1.2
+        with:
+          terraform_version: "1.1.7"
+      - name: Terraform Init
+        run: terraform init
+        working-directory: ./terraform
+      - name: Terraform Plan
+        run: terraform plan -var-file="${{ github.base_ref}}.tfvars"
+        working-directory: ./terraform
+      - name: Terraform Apply
+        run: terraform apply -auto-approve -var-file="${{ github.base_ref }}.tfvars"
+        working-directory: ./terraform
+      - name: Upload to s3
+        run: |
+          BUCKET_NAME=${terraform output -raw s3_bucket_name}
+          aws s3 sync build s3://$BUCKET_NAME --delete
+        working-directory: ./terraform
+      - name: Invalidate CloudFront Cache
+        run: |
+          DISTRIBUTION_ID=(aws cloudfront list-distributions --query "DistributionList.Items[?Comment=='FSL DEVOPS ${{ github.base_ref }}'].Id" --output text)
+          aws cloudfront create-invalidation --distribution-id $DISTRIBUTION_ID --paths "/*"
