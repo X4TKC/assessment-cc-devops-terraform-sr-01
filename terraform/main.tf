@@ -20,6 +20,10 @@ resource "aws_s3_bucket" "website" {
 resource "aws_s3_bucket" "logs" {
   bucket = "fsl-devops-${var.environment}-logs-bucket"
 }
+resource "aws_s3_bucket_acl" "logs_acl" {
+  bucket = aws_s3_bucket.logs.id
+  acl    = "private"
+}
 resource "aws_cloudfront_origin_access_control" "website_oac" {
   name                              = "fsl-oac-${var.environment}"
   description                       = "oac for ${var.environment} environment"
@@ -36,7 +40,7 @@ resource "aws_cloudfront_distribution" "website" {
 
   enabled             = true
   is_ipv6_enabled     = true
-  comment             = "FSL DEVOPS"
+  comment             = "FSL DEVOPS ${var.environment}"
   default_root_object = "index.html"
 
   logging_config {
